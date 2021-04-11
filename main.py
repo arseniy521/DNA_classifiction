@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn import model_selection
@@ -9,13 +10,13 @@ from sklearn import model_selection
 df = pd.read_csv("dna.csv")
 classes = df.loc[:, 'class']
 
-print(df)
 
 
 # create X and Y datasets for training
-
 X = np.array(df.drop(['class'], 1))
+
 y = np.array(df['class'])
+
 
 # define a seed for reproducibility
 seed = 1
@@ -33,8 +34,8 @@ names = ["Nearest Neighbors",
 
 classifiers = [
 
-    KNeighborsClassifier(n_neighbors=3),
-    DecisionTreeClassifier(max_depth=5),
+    KNeighborsClassifier(n_neighbors=14, weights='distance'),
+    DecisionTreeClassifier(max_depth=7, criterion='entropy'),
 ]
 
 models = zip(names, classifiers)
@@ -44,9 +45,9 @@ models = zip(names, classifiers)
 results = []
 names = []
 
+
 for name, model in models:
-    kfold = model_selection.KFold(n_splits=10)
-    cv_results = model_selection.cross_val_score(model, X_train, y_train, cv=kfold, scoring=scoring)
+    cv_results = model_selection.cross_val_score(model, X_train, y_train, scoring=scoring)
     results.append(cv_results)
     names.append(name)
     msg = '{0}: {1} ({2})'.format(name, cv_results.mean(), cv_results.std())
@@ -58,3 +59,22 @@ for name, model in models:
     print(round(accuracy_score(y_test, predictions), 2))
     print("Confusion Matrix/n")
     print(classification_report(y_test, predictions))
+
+
+KNN_parameters = {
+     "n_neighbors": range(1, 50),
+     "weights": ["uniform", "distance"],
+}
+KNN_grid = GridSearchCV(KNeighborsRegressor(), KNN_parameters)
+KNN_grid.fit(X_train, y_train)
+print('kek', KNN_grid.best_params_)
+
+DT_parameters = {"criterion": ['gini', 'entropy'],
+                 "max_depth": range(1, 10),
+                 # "min_samples_split": range(1, 10),
+                 # "min_samples_leaf": range(1, 5),
+}
+DT_grid = GridSearchCV(DecisionTreeClassifier(), DT_parameters)
+DT_grid.fit(X_train, y_train)
+print(DT_grid.best_params_)
+
